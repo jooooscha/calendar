@@ -14,11 +14,14 @@
     </head>
     <body>
 
-        <h4 class="range">...</h4>
         <div id="app">
+            <h4 class="date"></h4>
             <div id="buttons">
                 <button class="prev">prev</button>
                 <button class="next">next</button>
+                <button class="today">today</button>
+
+                <div class="spacer"></div>
 
                 <button class="week">Week</button>
                 <button class="multi-week">Multi Week</button>
@@ -27,10 +30,12 @@
 
             <div id="calendar"></div>
 
-            <div id="side-bar">
+            <div id="sideBarButtons">
                 <button class="all_off">All Off</button>
                 <button class="all_on">All On</button>
-                <ul id="calendar-list"></ul>
+            </div>
+            <div id="side-bar">
+                <div id="calendar-list"></div>
             </div>
         </div>
 

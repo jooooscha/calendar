@@ -1,16 +1,10 @@
-import { $, createCalButton, CalButton, Manager } from "./utils.js"
+import { $, CalButton, Manager } from "./utils.js"
 
 const manager = new Manager();
 
-// export const update = function() {
-//     $('.range').innerHTML = tuiCal.renderRange.start
-// }
+manager.update()
 
-// const update = manager.update
-function update() {}
-
-update()
-
+// implement the buttons
 var weekButton = $('.week');
 weekButton.addEventListener('click', function () {
     manager.changeView("week");
@@ -34,6 +28,11 @@ prevButton.addEventListener('click', function () {
     manager.prev();
 });
 
+var prevButton = $('.today');
+prevButton.addEventListener('click', function () {
+    manager.today();
+});
+
 var all_off_button = $('.all_off');
 all_off_button.addEventListener('click', function () {
     manager.toggleAll(false);
@@ -44,6 +43,8 @@ all_on_button.addEventListener('click', function () {
     manager.toggleAll(true);
 });
 
+
+//init sync of calendars
 async function init_calendars() {
     await fetch("http://localhost:5000/caldav/calendars")
         .then(response => {
@@ -59,7 +60,6 @@ function fetch_events() {
         return response.text()
     }).then(text => {
             let events = JSON.parse(text)
-            console.log(events)
             manager.addEvents(events)
         })
 }

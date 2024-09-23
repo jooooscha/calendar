@@ -4,6 +4,7 @@ export const $ = function (selector) {
 
 export class Manager {
     constructor() {
+        // create calendar objec
         this.tuiCal = new tui.Calendar('#calendar', {
             defaultView: 'month', // Can be 'day', 'week', or 'month'
             useCreationPopup: true, // Enable popup for creating events
@@ -19,6 +20,7 @@ export class Manager {
             },
             week: {
                 startDayOfWeek: 1,
+                taskView: ["task"],
             },
             calendars: [
                 // {
@@ -33,14 +35,18 @@ export class Manager {
         this.cals = {}
     }
     next() {
-        this.tuiCal.next();
+        this.tuiCal.next(); // move to next moneth/week (depends on context)
         this.update()
     }
     prev() {
-        this.tuiCal.prev();
+        this.tuiCal.prev(); // move to prev month/week (depens on context)
         this.update()
     }
-    changeView(view) {
+    today() {
+        this.tuiCal.today();
+        this.update()
+    }
+    changeView(view) { // change view to month, week, multi-week
         if (view == "week") {
             this.tuiCal.changeView("week");
         } else if (view == "month") {
@@ -60,10 +66,21 @@ export class Manager {
         }
         this.update()
     }
-    update() {
-        $('.range').innerHTML = this.tuiCal.renderRange.start;
+    update() { // update text and stuff
+        let d = this.tuiCal.renderRange.start;
+        let date = new Date(d)
+        const options = {
+          weekday: 'long',  // Full weekday name (e.g., Monday)
+          day: 'numeric',   // Numeric day (e.g., 23)
+          month: 'long',    // Full month name (e.g., September)
+          year: 'numeric'   // Full year (e.g., 2024)
+        };
+
+        const formattedDate = date.toLocaleDateString('en-GB', options);
+        console.log("d:", formattedDate)
+        $('.date').innerHTML = formattedDate
     }
-    addCals(cals) {
+    addCals(cals) { // add a new calendar to tuiCAl
         this.tuiCal.setCalendars(cals)
         for (let cal of cals) {
             let id = cal.id;
@@ -72,13 +89,21 @@ export class Manager {
                 // hide calendar
                 tuiCal.setCalendarVisibility(cal.id, b)
             }
-            let button = new CalButton(cal.id, cal.name, cal.visible, callback);
-            console.log("button:", button)
+            let button = new CalButton(
+                cal.id,
+                cal.name,
+                cal.visible,
+                cal.backgroundColor,
+                callback
+            );
             this.cals[id] = button
             $("#calendar-list").appendChild(button.export());
         }
     }
-    toggleAll(bool) {
+    addEvents(events) { // add new events to the calendar
+        this.tuiCal.createEvents(events)
+    }
+    toggleAll(bool) { // toggle all clalendars
         fetch("http://localhost:5000/caldav/toggle_all/" + bool)
             .then(response => {
                 return response.text()
@@ -86,7 +111,6 @@ export class Manager {
 
         for (let id in this.cals) {
             let cal = this.cals[id]
-            console.log(cal)
             this.tuiCal.setCalendarVisibility(cal.id, bool)
         }
         let cals = $("#calendar-list").children
@@ -94,26 +118,29 @@ export class Manager {
             cal.children[0].checked = bool
         }
     }
-    addEvents(events) {
-        this.tuiCal.createEvents(events)
-    }
 }
 
 export class CalButton {
-    constructor(id, name, b, onclickCallback) {
+    constructor(id, name, checked, color, onclickCallback) {
         this.id = id;
         this.name = name;
-        this.checked = b;
+        this.checked = checked;
         this.callback = onclickCallback;
+        this.color = color
     }
 
     export() {
-        let li = document.createElement("li");
-        // create checkbox
+        let calItem = document.createElement("div");
         let checkbox = document.createElement("input");
+        let circle = document.createElement("div");
 
         let id = this.id
         let callback = this.callback
+
+        calItem.classList.add("calItem")
+
+        circle.classList.add("circle")
+        circle.style.backgroundColor = this.color;
 
         checkbox.type = "checkbox";
         checkbox.checked = this.checked;
@@ -132,28 +159,10 @@ export class CalButton {
         let span = document.createElement("span")
         span.textContent = this.name
 
-        li.appendChild(checkbox)
-        li.appendChild(span)
+        calItem.appendChild(circle)
+        calItem.appendChild(checkbox)
+        calItem.appendChild(span)
 
-        return li
+        return calItem
     }
-}
-
-export const createCalButton = function() {
-    // let li = document.createElement("li");
-    // let checkbox = document.createElement("input");
-    // checkbox.type = "checkbox";
-
-    // let span = document.createElement("span")
-    // // span.textContent = cal.name
-    // // checkbox.onclick = function() {
-    //     // if (cal.id in visibility) {
-    //     //     tuiCal.setCalendarVisibility(cal.id, )
-    //     // }
-    // // }
-    // li.appendChild(checkbox)
-    // li.appendChild(span)
-    // // li.textContent = calName
-    // // $("#calendar-list").appendChild(li);
-    return li
 }

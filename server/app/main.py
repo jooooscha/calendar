@@ -8,6 +8,11 @@ import app.db as db
 from dotenv import load_dotenv
 import os
 
+# remove ctrl+c traceback
+import signal
+import sys
+signal.signal(signal.SIGINT, lambda x, y: sys.exit(0))
+
 load_dotenv()
 
 app = Flask(__name__)
@@ -45,23 +50,36 @@ def init():
             for event in cal.events():
                 for component in event.icalendar_instance.walk():
                     if component.name == "VEVENT":
-                        events.append(prepare(component))
+                        events.append(prepare(component, cal.id))
 
             event_map[cal.id] = events
 
-def prepare(component):
+def prepare(component, calId):
+
+    match component.get("dtstart").params.get("value"):
+        case "DATE":
+            category = "allday"
+        case _:
+            category = "time"
+
     event = {
         "id": component.get("uid"),
+        "calendarId": calId,
         "title": component.get("summary"),
+        "body": component.get("description"),
         "start": component.get("dtstart").dt.strftime("%Y-%m-%dT%H:%M"),
-        "datestamp": component.get("dtstamp").dt.strftime("%Y-%m-%dT%H:%M"),
-        "body": "Body",
-        "isAllday": True,
+        #  "end": component.get("dtend").dt.strftime("%Y-%m-%dT%H:%M"),
+        "location": component.get("location"),
+        "isReadOnly": True, # TODO:
+        "category": category
     }
+
     endDate = component.get("dtend")
     if endDate and endDate.dt:
         event["end"] = endDate.dt.strftime("%Y-%m-%dT%H:%M")
-    #  print(event)
+    else:
+        event["end"] = event["start"]
+
     return event
 
 @app.route('/caldav/calendars')
@@ -72,7 +90,7 @@ def get_calendars():
             "id": r[0],
             "visible": r[1],
             "name": r[2],
-            "backrgoundColor": r[3],
+            "backgroundColor": r[3],
         }
         for r in data
     ]
@@ -81,14 +99,8 @@ def get_calendars():
 
 @app.route('/caldav/events')
 def get_caldav_events():
-
-    ret = []
-    for cal_id, events in event_map.items():
-        for e in events:
-            e["calendarId"] = cal_id
-        ret.extend(events)
-
-    return jsonify(ret)
+    events = [item for sublist in event_map.values() for item in sublist]
+    return jsonify(events)
 
 @app.route('/caldav/toggle/<cal_id>')
 def toggle_calendar(cal_id):

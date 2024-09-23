@@ -15,7 +15,7 @@ dependencies = [
   # "pillow",
     "flask",
     "caldav",
-    "dotenv",
+    "python-dotenv",
 ]
 
 # when source dir is not called src, it has to be specified here
