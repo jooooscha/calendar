@@ -1,0 +1,29 @@
+[project]
+name = "my-app"
+version = "0.1.0"
+description = "Simple app"
+# readme = "README.md"
+requires-python = ">=3.8"
+# authors = [ {email = ""}, {name = ""} ]
+# maintainers = [ {name = "", email = ""} ]
+# classifiers = [
+#   "Development Status :: 4 - Beta",
+#   "Programming Language :: Python"
+# ]
+
+dependencies = [
+  # "pillow",
+    "flask",
+    "caldav",
+    "dotenv",
+]
+
+# when source dir is not called src, it has to be specified here
+# For example: replace main:main with srcfiles.main:main
+# This calles the main() function from srcfiles/main.py
+[project.scripts]
+cli = "app.main:main"
+
+# not sure about this
+# [project.entry-points."spam.magical"]
+# tomatoes = "spam:main_tomatoes"

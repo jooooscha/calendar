@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Toast UI Calendar Example</title>
+
+        <!-- Toast UI Calendar CSS (from CDN) -->
+        <link rel="stylesheet" href="https://uicdn.toast.com/calendar/latest/toastui-calendar.min.css">
+
+        <!-- Optional: Toast UI Calendar theme (for a better look) -->
+        <link rel="stylesheet" href="https://uicdn.toast.com/calendar/latest/toastui-calendar.min.css" />
+        <link rel="stylesheet" href="./style.css" />
+    </head>
+    <body>
+
+        <h4 class="range">...</h4>
+        <div id="app">
+            <div id="buttons">
+                <button class="prev">prev</button>
+                <button class="next">next</button>
+
+                <button class="week">Week</button>
+                <button class="multi-week">Multi Week</button>
+                <button class="month">Month</button>
+            </div>
+
+            <div id="calendar"></div>
+
+            <div id="side-bar">
+                <button class="all_off">All Off</button>
+                <button class="all_on">All On</button>
+                <ul id="calendar-list"></ul>
+            </div>
+        </div>
+
+        <!-- TUI Calendar JavaScript (from CDN) -->
+        <script src="https://uicdn.toast.com/calendar/latest/toastui-calendar.min.js"></script>
+        <script type="module" src="./data.js"></script>
+    </body>
+</html>
