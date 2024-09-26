@@ -1,4 +1,4 @@
-import { $, CalButton, Manager } from "./utils.js"
+import { $, CalButton, Manager } from "./manager.js"
 
 const manager = new Manager();
 

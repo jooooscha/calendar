@@ -77,7 +77,6 @@ export class Manager {
         };
 
         const formattedDate = date.toLocaleDateString('en-GB', options);
-        console.log("d:", formattedDate)
         $('.date').innerHTML = formattedDate
     }
     addCals(cals) { // add a new calendar to tuiCAl
@@ -97,7 +96,7 @@ export class Manager {
                 callback
             );
             this.cals[id] = button
-            $("#calendar-list").appendChild(button.export());
+            button.addSelfToList()
         }
     }
     addEvents(events) { // add new events to the calendar
@@ -129,21 +128,42 @@ export class CalButton {
         this.color = color
     }
 
-    export() {
-        let calItem = document.createElement("div");
-        let checkbox = document.createElement("input");
-        let circle = document.createElement("div");
-
+    addSelfToList() {
         let id = this.id
         let callback = this.callback
 
-        calItem.classList.add("calItem")
+        // let calItem = document.createElement("div");
 
-        circle.classList.add("circle")
-        circle.style.backgroundColor = this.color;
+        // calItem.classList.add("calItem")
 
+        // let circle = document.createElement("div");
+        // circle.classList.add("circle")
+        // circle.style.backgroundColor = this.color;
+        // calItem.appendChild(circle)
+
+        let label = document.createElement("label")
+        label.classList.add("btn")
+        // label.classList.add("btn-primary")
+        label.classList.add("calendarBtnLabel")
+        label.setAttribute("for", "button-" + id)
+        label.textContent = this.name
+        label.style.backgroundColor = this.color;
+
+        let r = parseInt(this.color.substring(1, 3), 16);
+        let g = parseInt(this.color.substring(3, 5), 16);
+        let b = parseInt(this.color.substring(5, 7), 16);
+        let luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+        let textColor = luminance > 176 ? '#202020' : '#eeeeee';
+
+        label.style.color = textColor;
+
+        let checkbox = document.createElement("input");
         checkbox.type = "checkbox";
+        checkbox.classList.add("btn-check")
+        checkbox.id = "button-" + id
+        checkbox.setAttribute("autocomplete", "off")
         checkbox.checked = this.checked;
+        label.style.opacity = this.checked ? 1 : 0.5;
         checkbox.onclick = function(event) {
             event.preventDefault()
             // toggle calendar in backend and call callback
@@ -152,17 +172,13 @@ export class CalButton {
                 .then(v => {
                     v = JSON.parse(v)
                     this.checked = v.visible
+                    label.style.opacity = v.visible ? 1 : 0.5;
                     callback(v.visible)
                 })
         }
+        // calItem.appendChild(checkbox)
 
-        let span = document.createElement("span")
-        span.textContent = this.name
-
-        calItem.appendChild(circle)
-        calItem.appendChild(checkbox)
-        calItem.appendChild(span)
-
-        return calItem
+        $("#calendar-list").appendChild(checkbox);
+        $("#calendar-list").appendChild(label);
     }
 }
