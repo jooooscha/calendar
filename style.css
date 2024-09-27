@@ -26,6 +26,8 @@
 .date {
     grid-area: date;
     justify-self: end;
+    place-self: center;
+    font-family: Noto Sans;
 }
 
 #side-bar {

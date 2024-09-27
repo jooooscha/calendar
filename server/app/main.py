@@ -17,70 +17,63 @@ load_dotenv()
 
 app = Flask(__name__)
 
-event_map = {}
-
-def init():
+def init(sync=False):
     global calendar_list
     global event_map
 
     db.init()
 
-    # CalDAV server details
-    url = os.getenv('SERVER_URL')
-    username = os.getenv("USER")
-    password = os.getenv("PASSWORD")
+    if sync:
+        # CalDAV server details
+        url = os.getenv('SERVER_URL')
+        username = os.getenv("USER")
+        password = os.getenv("PASSWORD")
 
-    # Connect to the CalDAV server
-    try:
-        client = caldav.DAVClient(url, username=username, password=password)
-    except:
-        return 404
-    principal = client.principal()
-    calendars = principal.calendars()
+        # Connect to the CalDAV server
+        try:
+            client = caldav.DAVClient(url, username=username, password=password)
+        except:
+            return 404
+        principal = client.principal()
+        calendars = principal.calendars()
 
-    if not calendars:
-        return jsonify({"error": "No calendars found"}), 404
-    else:
-        for cal in calendars:
+        if not calendars:
+            return jsonify({"error": "No calendars found"}), 404
+        else:
+            for cal in calendars:
 
-            color = cal.get_property(caldav.elements.ical.CalendarColor())
-            db.add_cal(cal.id, cal.name, color, visible=True)
+                color = cal.get_property(caldav.elements.ical.CalendarColor())
+                db.add_cal(cal.id, cal.name, color, visible=True)
 
-            events = []
-            for event in cal.events():
-                for component in event.icalendar_instance.walk():
-                    if component.name == "VEVENT":
-                        events.append(prepare(component, cal.id))
+                for event in cal.events():
+                    for component in event.icalendar_instance.walk():
+                        if component.name == "VEVENT":
 
-            event_map[cal.id] = events
+                            endDate = component.get("dtend")
 
-def prepare(component, calId):
+                            start = component.get("dtstart").dt.strftime("%Y-%m-%dT%H:%M")
+                            if endDate and endDate.dt:
+                                end = endDate.dt.strftime("%Y-%m-%dT%H:%M")
+                            else:
+                                end = start
 
-    match component.get("dtstart").params.get("value"):
-        case "DATE":
-            category = "allday"
-        case _:
-            category = "time"
+                            match component.get("dtstart").params.get("value"):
+                                case "DATE":
+                                    category = "allday"
+                                case _:
+                                    category = "time"
 
-    event = {
-        "id": component.get("uid"),
-        "calendarId": calId,
-        "title": component.get("summary"),
-        "body": component.get("description"),
-        "start": component.get("dtstart").dt.strftime("%Y-%m-%dT%H:%M"),
-        #  "end": component.get("dtend").dt.strftime("%Y-%m-%dT%H:%M"),
-        "location": component.get("location"),
-        "isReadOnly": True, # TODO:
-        "category": category
-    }
-
-    endDate = component.get("dtend")
-    if endDate and endDate.dt:
-        event["end"] = endDate.dt.strftime("%Y-%m-%dT%H:%M")
-    else:
-        event["end"] = event["start"]
-
-    return event
+                            db.add_event(
+                                id=component.get("uid"),
+                                calendar_id=cal.id,
+                                title=component.get("summary"),
+                                body=component.get("description"),
+                                start=start,
+                                end=end,
+                                location=component.get("location"),
+                                read_only=True,
+                                category=category,
+                            )
 
 @app.route('/caldav/calendars')
 def get_calendars():
@@ -99,8 +92,24 @@ def get_calendars():
 
 @app.route('/caldav/events')
 def get_caldav_events():
-    events = [item for sublist in event_map.values() for item in sublist]
-    return jsonify(events)
+    data = db.get_events()
+    events = [
+        {
+            "id": row["id"],
+            "calendarId": row["calendarId"],
+            "title": row["title"],
+            "body": row["body"],
+            "start": row["start"],
+            "end": row["end"],
+            "location": row["location"],
+            "isReadOnly": row["isReadOnly"],
+            "category": row["category"],
+        }
+        for row in data
+    ]
+    return events
+
+
 
 @app.route('/caldav/toggle/<cal_id>')
 def toggle_calendar(cal_id):

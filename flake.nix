@@ -18,7 +18,7 @@
       project = pyproject-nix.lib.project.loadPyproject {
         # Read & unmarshal pyproject.toml relative to this project root.
         # projectRoot is also used to set `src` for renderers such as buildPythonPackage.
-        projectRoot = ./.;
+        projectRoot = ./server;
       };
 
       # This example is only using x86_64-linux
@@ -51,7 +51,10 @@
         in
         # Create a devShell like normal.
         pkgs.mkShell {
-          packages = [ pythonEnv ];
+          packages = [
+            pythonEnv
+            pkgs.sqlitebrowser
+          ];
         };
 
       # Build our package using `buildPythonPackage

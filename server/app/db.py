@@ -17,6 +17,21 @@ def init():
         )
     ''')
 
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS events (
+            id TEXT NOT NULL,
+            calendarId TEXT NOT NULL,
+            title TEXT,
+            body TEXT,
+            start TEXT,
+            end TEXT,
+            location TEXT,
+            isReadOnly TEXT,
+            category TEXT,
+            PRIMARY KEY (id, calendarId)
+        )
+    ''');
+
     conn.commit()
     conn.close()
 
@@ -58,3 +73,44 @@ def set_visibility_all(state):
     cur.execute(f"UPDATE calendars SET visible = ?", (state,))
     conn.commit()
     conn.close()
+
+def add_event(
+    id,
+    calendar_id,
+    title,
+    body,
+    start,
+    end,
+    location,
+    read_only,
+    category
+):
+    conn = sqlite3.connect('calendars.db')
+    cur = conn.cursor()
+    cur.execute("INSERT OR REPLACE INTO events (id, calendarId, title, body, start, end, location, isReadOnly, category) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            id,
+            calendar_id,
+            title,
+            body,
+            start,
+            end,
+            location,
+            read_only,
+            category
+        )
+    )
+    conn.commit()
+    conn.close()
+
+def get_events():
+    conn = sqlite3.connect('calendars.db')
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    cur.execute(f"SELECT * FROM events")
+    rows = cur.fetchall()
+    conn.close()
+    result = [dict(row) for row in rows]
+    return result
+
+
