@@ -42,7 +42,17 @@ var all_on_button = $('.all_on');
 all_on_button.addEventListener('click', function () {
     manager.toggleAll(true);
 });
+$('.syncbtn').addEventListener('click', () => sync())
 
+async function sync() {
+    await fetch("http://localhost:5000/caldav/sync")
+        .then(response => {
+            return response.text()
+        }).then(text => {
+            let ret = JSON.parse(text)
+            console.log("ret:", ret)
+        })
+}
 
 //init sync of calendars
 async function init_calendars() {

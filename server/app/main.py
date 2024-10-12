@@ -17,6 +17,62 @@ load_dotenv()
 
 app = Flask(__name__)
 
+def sync_data():
+    print("Starting data sync")
+    # CalDAV server details
+    url = os.getenv('SERVER_URL')
+    username = os.getenv("USER")
+    password = os.getenv("PASSWORD")
+
+    # Connect to the CalDAV server
+    try:
+        client = caldav.DAVClient(url, username=username, password=password)
+    except:
+        print("Could not login to DAV client")
+        return 404
+    principal = client.principal()
+    calendars = principal.calendars()
+
+    if not calendars:
+        print("No calendars found")
+        return jsonify({"error": "No calendars found"}), 404
+    else:
+        for cal in calendars:
+
+            color = cal.get_property(caldav.elements.ical.CalendarColor())
+            db.add_cal(cal.id, cal.name, color, visible=True)
+
+            for event in cal.events():
+                for component in event.icalendar_instance.walk():
+                    if component.name == "VEVENT":
+
+                        endDate = component.get("dtend")
+
+                        start = component.get("dtstart").dt.strftime("%Y-%m-%dT%H:%M")
+                        if endDate and endDate.dt:
+                            end = endDate.dt.strftime("%Y-%m-%dT%H:%M")
+                        else:
+                            end = start
+
+                        match component.get("dtstart").params.get("value"):
+                            case "DATE":
+                                category = "allday"
+                            case _:
+                                category = "time"
+
+                        db.add_event(
+                            id=component.get("uid"),
+                            calendar_id=cal.id,
+                            title=component.get("summary"),
+                            body=component.get("description"),
+                            start=start,
+                            end=end,
+                            location=component.get("location"),
+                            read_only=True,
+                            category=category,
+                        )
+    print("DB data updated")
+
 def init(sync=False):
     global calendar_list
     global event_map
@@ -24,56 +80,7 @@ def init(sync=False):
     db.init()
 
     if sync:
-        # CalDAV server details
-        url = os.getenv('SERVER_URL')
-        username = os.getenv("USER")
-        password = os.getenv("PASSWORD")
-
-        # Connect to the CalDAV server
-        try:
-            client = caldav.DAVClient(url, username=username, password=password)
-        except:
-            return 404
-        principal = client.principal()
-        calendars = principal.calendars()
-
-        if not calendars:
-            return jsonify({"error": "No calendars found"}), 404
-        else:
-            for cal in calendars:
-
-                color = cal.get_property(caldav.elements.ical.CalendarColor())
-                db.add_cal(cal.id, cal.name, color, visible=True)
-
-                for event in cal.events():
-                    for component in event.icalendar_instance.walk():
-                        if component.name == "VEVENT":
-
-                            endDate = component.get("dtend")
-
-                            start = component.get("dtstart").dt.strftime("%Y-%m-%dT%H:%M")
-                            if endDate and endDate.dt:
-                                end = endDate.dt.strftime("%Y-%m-%dT%H:%M")
-                            else:
-                                end = start
-
-                            match component.get("dtstart").params.get("value"):
-                                case "DATE":
-                                    category = "allday"
-                                case _:
-                                    category = "time"
-
-                            db.add_event(
-                                id=component.get("uid"),
-                                calendar_id=cal.id,
-                                title=component.get("summary"),
-                                body=component.get("description"),
-                                start=start,
-                                end=end,
-                                location=component.get("location"),
-                                read_only=True,
-                                category=category,
-                            )
+        sync_data()
 
 @app.route('/caldav/calendars')
 def get_calendars():
@@ -129,6 +136,20 @@ def toggle_calendar_all(state):
         "error": False,
     }
     return jsonify(ret)
+
+@app.route('/caldav/sync')
+def sync_calendar():
+    x = sync_data()
+    if x is None:
+        ret = {
+            "error": False,
+        }
+    else:
+        ret = {
+            "error": True,
+        }
+    return jsonify(ret)
+
 
 
 def main():
