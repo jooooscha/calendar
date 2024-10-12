@@ -7,11 +7,14 @@ import json
 import app.db as db
 from dotenv import load_dotenv
 import os
+from datetime import datetime, timedelta
 
 # remove ctrl+c traceback
 import signal
 import sys
 signal.signal(signal.SIGINT, lambda x, y: sys.exit(0))
+
+DATEFORMAT = "%Y-%m-%dT%H:%M"
 
 load_dotenv()
 
@@ -37,7 +40,9 @@ def sync_data():
         print("No calendars found")
         return jsonify({"error": "No calendars found"}), 404
     else:
+        print(f"Found {len(calendars)} calendars")
         for cal in calendars:
+            print(f"syncing {cal}")
 
             color = cal.get_property(caldav.elements.ical.CalendarColor())
             db.add_cal(cal.id, cal.name, color, visible=True)
@@ -48,15 +53,21 @@ def sync_data():
 
                         endDate = component.get("dtend")
 
-                        start = component.get("dtstart").dt.strftime("%Y-%m-%dT%H:%M")
+                        start = component.get("dtstart").dt.strftime(DATEFORMAT)
                         if endDate and endDate.dt:
-                            end = endDate.dt.strftime("%Y-%m-%dT%H:%M")
+                            end = endDate.dt.strftime(DATEFORMAT)
                         else:
                             end = start
 
                         match component.get("dtstart").params.get("value"):
                             case "DATE":
                                 category = "allday"
+
+                                # for some reason, nextcloud stores the end date for all-day events as the n+1 date
+                                # therefore, we descrease the end date by one
+                                fixedend = datetime.strptime(end, DATEFORMAT) - timedelta(days=1)
+                                end = fixedend.strftime(DATEFORMAT)
+
                             case _:
                                 category = "time"
 
@@ -154,7 +165,7 @@ def sync_calendar():
 
 def main():
     print("Connect to DAV")
-    init()
+    init(True)
     print("Running server...")
     app.run(debug=True)
 
