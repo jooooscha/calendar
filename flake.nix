@@ -51,9 +51,10 @@
         in
         # Create a devShell like normal.
         pkgs.mkShell {
-          packages = [
+          packages = with pkgs; [
             pythonEnv
-            pkgs.sqlitebrowser
+            sqlitebrowser
+            nodePackages.live-server
           ];
         };
 
