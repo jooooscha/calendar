@@ -47,6 +47,7 @@ def sync_data():
             color = cal.get_property(caldav.elements.ical.CalendarColor())
             db.add_cal(cal.id, cal.name, color, visible=True)
 
+            print(f"{cal} has {len(cal.events())} events")
             for event in cal.events():
                 for component in event.icalendar_instance.walk():
                     if component.name == "VEVENT":

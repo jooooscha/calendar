@@ -101,6 +101,7 @@ export class Manager {
     }
     addEvents(events) { // add new events to the calendar
         this.tuiCal.createEvents(events)
+        this.reloadVisibility()
     }
     toggleAll(bool) { // toggle all clalendars
         fetch("http://localhost:5000/caldav/toggle_all/" + bool)
@@ -111,10 +112,15 @@ export class Manager {
         for (let id in this.cals) {
             let cal = this.cals[id]
             this.tuiCal.setCalendarVisibility(cal.id, bool)
+            cal.setState(bool)
         }
-        let cals = $("#calendar-list").children
-        for (let cal of cals) {
-            cal.children[0].checked = bool
+    }
+    reloadVisibility() {
+        for (let id in this.cals) {
+            let cal = this.cals[id]
+            // this.tuiCal.setCalendarVisibility(cal.id, Boolean(cal.chcked))
+            let c = cal.checked != 0
+            this.tuiCal.setCalendarVisibility(id, c)
         }
     }
 }
@@ -142,6 +148,7 @@ export class CalButton {
         // calItem.appendChild(circle)
 
         let label = document.createElement("label")
+        this.label = label
         label.classList.add("btn")
         // label.classList.add("btn-primary")
         label.classList.add("calendarBtnLabel")
@@ -180,5 +187,10 @@ export class CalButton {
 
         $("#calendar-list").appendChild(checkbox);
         $("#calendar-list").appendChild(label);
+    }
+
+    setState(visible) {
+        this.checked = visible
+        this.label.style.opacity = visible ? 1 : 0.5;
     }
 }
