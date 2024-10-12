@@ -4,6 +4,24 @@ const manager = new Manager();
 
 manager.update()
 
+function butttonSuccessAnimation(btn, success) {
+    btn.classList.remove('btn-secondary');
+
+    let btnclass;
+    if (success) {
+        btnclass = "btn-success"
+    } else {
+        btnclass = "btn-danger"
+    }
+    btn.classList.add(btnclass);
+
+    // After 3 seconds, revert the button back to the original color
+    setTimeout(() => {
+        btn.classList.remove(btnclass);
+        btn.classList.add('btn-secondary');
+    }, 3000)
+}
+
 // implement the buttons
 var weekButton = $('.week');
 weekButton.addEventListener('click', function () {
@@ -42,16 +60,30 @@ var all_on_button = $('.all_on');
 all_on_button.addEventListener('click', function () {
     manager.toggleAll(true);
 });
-$('.syncbtn').addEventListener('click', () => sync())
+
+$('.syncbtn').addEventListener('click', () =>  sync() )
 
 async function sync() {
-    await fetch("http://localhost:5000/caldav/sync")
-        .then(response => {
-            return response.text()
-        }).then(text => {
-            let ret = JSON.parse(text)
-            console.log("ret:", ret)
-        })
+    let syncbtn = $('.syncbtn')
+    syncbtn.disable = true
+    syncbtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Syncing ...`;
+    try {
+        await fetch("http://localhost:5000/caldav/sync")
+            .then(response => {
+                return response.text()
+            }).then(text => {
+                let ret = JSON.parse(text)
+                console.log("ret:", ret)
+            })
+        butttonSuccessAnimation(syncbtn, true)
+    } catch (error) {
+        console.log("Could not finisch update: " + error)
+        butttonSuccessAnimation(syncbtn, false)
+    } finally {
+        syncbtn.disable = false
+        syncbtn.innerHTML = 'Sync';
+        manager.update()
+    }
 }
 
 //init sync of calendars
