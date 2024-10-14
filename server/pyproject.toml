@@ -13,9 +13,10 @@ requires-python = ">=3.8"
 
 dependencies = [
   # "pillow",
-    "flask",
-    "caldav",
-    "python-dotenv",
+  "flask",
+  "caldav",
+  "python-dotenv",
+  "python-dateutil",
 ]
 
 # when source dir is not called src, it has to be specified here

@@ -8,6 +8,7 @@ import app.db as db
 from dotenv import load_dotenv
 import os
 from datetime import datetime, timedelta
+from dateutil.rrule import rrulestr
 
 # remove ctrl+c traceback
 import signal
@@ -48,6 +49,9 @@ def sync_data():
         for cal in calendars:
             print(f"syncing {cal}")
 
+            if cal.name != "TESTCAL": # TODO: remove
+                continue
+
             color = cal.get_property(caldav.elements.ical.CalendarColor())
             db.add_cal(cal.id, cal.name, color, visible=True)
 
@@ -55,6 +59,10 @@ def sync_data():
             for event in cal.events():
                 for component in event.icalendar_instance.walk():
                     if component.name == "VEVENT":
+
+                        #  print(component.get("rrule"))
+                        #  print(component.get("exdate"))
+                        #  breakpoint()
 
                         endDate = component.get("dtend")
 
@@ -76,6 +84,18 @@ def sync_data():
                             case _:
                                 category = "time"
 
+                        exdates = []
+                        exdate_list = component.get("exdate")
+                        if exdate_list is not None:
+                            for exdate in exdate_list:
+                                exdates.append(exdate.dts[0].dt)
+
+                        if component.get("rrule"):
+                            print(component.get("rrule"))
+                            rrule = component.get("rrule").to_ical().decode()
+                        else:
+                            rrule = ""
+
                         db.add_event(
                             id=component.get("uid"),
                             calendar_id=cal.id,
@@ -86,6 +106,8 @@ def sync_data():
                             location=component.get("location"),
                             read_only=True,
                             category=category,
+                            rrule=rrule,
+                            exdates=exdates
                         )
     print("DB data updated")
 
@@ -97,6 +119,49 @@ def init(sync=False):
 
     if sync:
         sync_data()
+
+def assemble_events(row):
+    events = []
+    start = row["start"]
+    if row["rrule"]:
+        # handle rrule
+        rrule = row["rrule"]
+        rrule_str = f"RRULE:{rrule}"
+        # Create a string combining the DTSTART and RRULE
+        rule_string = f"DTSTART:{start}\n{rrule_str}"
+        # Parse the rrule
+        rule = rrulestr(rule_string)
+        occurrences = list(rule)
+
+        for o in occurrences:
+            events.append(
+                {
+                    "id": row["id"],
+                    "calendarId": row["calendarId"],
+                    "title": row["title"],
+                    "body": row["body"],
+                    "start": row["start"],
+                    "end": row["end"],
+                    "location": row["location"],
+                    "isReadOnly": row["isReadOnly"],
+                    "category": row["category"],
+                }
+            )
+    else:
+        events.append([
+            {
+                "id": row["id"],
+                "calendarId": row["calendarId"],
+                "title": row["title"],
+                "body": row["body"],
+                "start": row["start"],
+                "end": row["end"],
+                "location": row["location"],
+                "isReadOnly": row["isReadOnly"],
+                "category": row["category"],
+            }
+        ])
+    return events
 
 @app.route('/caldav/calendars')
 def get_calendars():
@@ -116,20 +181,12 @@ def get_calendars():
 @app.route('/caldav/events')
 def get_caldav_events():
     data = db.get_events()
-    events = [
-        {
-            "id": row["id"],
-            "calendarId": row["calendarId"],
-            "title": row["title"],
-            "body": row["body"],
-            "start": row["start"],
-            "end": row["end"],
-            "location": row["location"],
-            "isReadOnly": row["isReadOnly"],
-            "category": row["category"],
-        }
-        for row in data
-    ]
+
+    events = []
+    for row in data:
+        events.append(assemble_events(row))
+
+    print(events)
     return events
 
 
@@ -170,7 +227,7 @@ def sync_calendar():
 
 def main():
     print("Connect to DAV")
-    init(True)
+    init(False)
     print("Running server...")
     app.run(debug=True)
 

@@ -10,6 +10,7 @@ def init(drop=False):
     if drop:
         cur.execute("DROP TABLE IF EXISTS calendars")
         cur.execute("DROP TABLE IF EXISTS events")
+        cur.execute("DROP TABLE IF EXISTS exdates")
 
 
     # Step 3: Create a table
@@ -33,9 +34,20 @@ def init(drop=False):
             location TEXT,
             isReadOnly TEXT,
             category TEXT,
+            rrule TEXT,
             PRIMARY KEY (id, calendarId)
         )
     ''');
+
+
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS exdates (
+            eventId TEXT NOT NULL,
+            calendarId TEXT NOT NULL,
+            date TEXT NOT NULL,
+            PRIMARY KEY (eventId, calendarId)
+        )
+    ''')
 
     conn.commit()
     conn.close()
@@ -88,11 +100,18 @@ def add_event(
     end,
     location,
     read_only,
-    category
+    category,
+    rrule,
+    exdates,
 ):
     conn = sqlite3.connect('calendars.db')
     cur = conn.cursor()
-    cur.execute("INSERT OR REPLACE INTO events (id, calendarId, title, body, start, end, location, isReadOnly, category) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    cur.execute("""
+        INSERT OR REPLACE INTO events
+            (id, calendarId, title, body, start, end, location, isReadOnly, category, rrule)
+        VALUES
+            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
         (
             id,
             calendar_id,
@@ -102,9 +121,22 @@ def add_event(
             end,
             location,
             read_only,
-            category
+            category,
+            rrule
         )
     )
+
+    for d in exdates:
+        cur.execute("""
+            INSERT OR REPLACE INTO
+                exdates
+                (eventId, calendarId, date)
+            VALUES
+                (?, ?, ?)
+         """,
+            (id, calendar_id, d)
+        )
+
     conn.commit()
     conn.close()
 
