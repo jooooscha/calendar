@@ -51,15 +51,8 @@ prevButton.addEventListener('click', function () {
     manager.today();
 });
 
-var all_off_button = $('.all_off');
-all_off_button.addEventListener('click', function () {
-    manager.toggleAll(false);
-});
-
-var all_on_button = $('.all_on');
-all_on_button.addEventListener('click', function () {
-    manager.toggleAll(true);
-});
+$('.allOn').addEventListener('click', () => manager.toggleAll(true) );
+$('.allOff').addEventListener('click', () => manager.toggleAll(false) );
 
 $('.syncbtn').addEventListener('click', () =>  sync() )
 
