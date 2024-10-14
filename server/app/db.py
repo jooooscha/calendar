@@ -1,11 +1,16 @@
 import sqlite3
 
-def init():
+def init(drop=False):
     # Step 1: Connect to the database (or create it)
     conn = sqlite3.connect('calendars.db')
 
     # Step 2: Create a cursor object
     cur = conn.cursor()
+
+    if drop:
+        cur.execute("DROP TABLE IF EXISTS calendars")
+        cur.execute("DROP TABLE IF EXISTS events")
+
 
     # Step 3: Create a table
     cur.execute('''
@@ -113,4 +118,5 @@ def get_events():
     result = [dict(row) for row in rows]
     return result
 
-
+def purge():
+    init(drop=True)

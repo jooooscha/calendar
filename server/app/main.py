@@ -21,6 +21,10 @@ load_dotenv()
 app = Flask(__name__)
 
 def sync_data():
+
+    print("dropping old data")
+    db.purge()
+
     print("Starting data sync")
     # CalDAV server details
     url = os.getenv('SERVER_URL')
