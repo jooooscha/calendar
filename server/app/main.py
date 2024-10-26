@@ -103,7 +103,11 @@ def sync_data():
                                     s = start.date()
                                 else:
                                     s = start
-                                diff = occ.date() - s
+                                if isinstance(occ, datetime):
+                                    diff = occ.date() - s
+                                else:
+                                    diff = occ - s
+
                                 try:
                                     end = end + diff
                                 except:
