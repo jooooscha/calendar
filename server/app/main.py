@@ -50,6 +50,7 @@ def sync_data():
         for cal in calendars:
             print(f"syncing {cal}")
 
+
             # Add calendar to DB (if not exists)
             color = cal.get_property(caldav.elements.ical.CalendarColor())
             db.add_cal(cal.id, cal.name, color, visible=True)
@@ -99,16 +100,13 @@ def sync_data():
                                 if occ.year > datetime.now().year + 10:
                                     continue
 
-                                if isinstance(start, datetime):
-                                    s = start.date()
-                                else:
-                                    s = start
-                                if isinstance(occ, datetime):
-                                    diff = occ.date() - s
-                                else:
-                                    diff = occ - s
+                                # event start, not start of this repetition
+                                # we calculate that later with the diff
+                                start = start.date() if isinstance(start, datetime) else start
+                                diff = occ.date() - start if isinstance(occ, datetime) else occ - start
 
                                 try:
+                                    start = start + diff
                                     end = end + diff
                                 except:
                                     breakpoint()
@@ -171,6 +169,8 @@ def assemble_events(row):
         # handle rrule
         occurrences = process_rrule(row["rrule"], start)
 
+        breakpoint()
+
         for o in occurrences:
             events.append(event_to_dict(row, new_start=o))
     else:
@@ -198,7 +198,10 @@ def get_caldav_events():
     print("Events requested")
     data = db.get_events()
 
-    events = [ assemble_events(row) for row in data ]
+    #  events = [ row) for row in data ]
+
+    events = data
+    #  breakpoint()
 
     return events
 
@@ -225,13 +228,9 @@ def toggle_calendar_all(state):
 def sync_calendar():
     x = sync_data()
     if x is None:
-        ret = {
-            "error": False,
-        }
+        ret = { "error": False, }
     else:
-        ret = {
-            "error": True,
-        }
+        ret = { "error": True, }
     return jsonify(ret)
 
 

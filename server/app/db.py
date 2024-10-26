@@ -25,7 +25,8 @@ def init(drop=False):
 
     cur.execute('''
         CREATE TABLE IF NOT EXISTS events (
-            id TEXT NOT NULL,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            eventId TEXT NOT NULL,
             calendarId TEXT NOT NULL,
             title TEXT,
             body TEXT,
@@ -34,8 +35,7 @@ def init(drop=False):
             location TEXT,
             isReadOnly TEXT,
             category TEXT,
-            rrule TEXT,
-            PRIMARY KEY (id, calendarId)
+            rrule TEXT
         )
     ''');
 
@@ -114,7 +114,7 @@ def add_event(
 
     cur.execute("""
         INSERT OR REPLACE INTO events
-            (id, calendarId, title, body, start, end, location, isReadOnly, category, rrule)
+            (eventId, calendarId, title, body, start, end, location, isReadOnly, category, rrule)
         VALUES
             (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """,

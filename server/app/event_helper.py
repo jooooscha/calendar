@@ -18,7 +18,7 @@ def process_rrule(rrule, start) -> list[datetime]:
     return occurrences
 
 
-def event_to_dict(row: dict) -> dict:
+def event_to_dict(row: dict, new_start=None) -> dict:
 
     return {
         "id": row["id"],
