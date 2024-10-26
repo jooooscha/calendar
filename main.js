@@ -23,39 +23,18 @@ function butttonSuccessAnimation(btn, success) {
 }
 
 // implement the buttons
-var weekButton = $('.week');
-weekButton.addEventListener('click', function () {
-    manager.changeView("week");
-});
-var weekButton = $('.month');
-weekButton.addEventListener('click', function () {
-    manager.changeView("month");
-});
-var weekButton = $('.multi-week');
-weekButton.addEventListener('click', function () {
-    manager.changeView("multi-week");
-});
-
-var nextButton = $('.next');
-nextButton.addEventListener('click', function () {
-    manager.next();
-});
-
-var prevButton = $('.prev');
-prevButton.addEventListener('click', function () {
-    manager.prev();
-});
-
-var prevButton = $('.today');
-prevButton.addEventListener('click', function () {
-    manager.today();
-});
-
+$('.week').addEventListener('click', () => manager.changeView("week") );
+$('.month').addEventListener('click', () => manager.changeView("month") );
+$('.multi-week').addEventListener('click', () => manager.changeView("multi-week") );
+$('.next').addEventListener('click', () => manager.next() );
+$('.prev').addEventListener('click', () => manager.prev() );
+$('.today').addEventListener('click', () => manager.today() );
 $('.allOn').addEventListener('click', () => manager.toggleAll(true) );
 $('.allOff').addEventListener('click', () => manager.toggleAll(false) );
-
 $('.syncbtn').addEventListener('click', () =>  sync() )
 
+
+// implement the sync button functionality and animation
 async function sync() {
     let syncbtn = $('.syncbtn')
     syncbtn.disable = true
@@ -81,20 +60,25 @@ async function sync() {
 
 //init sync of calendars
 async function init_calendars() {
+    console.debug("Fetching calendars")
     await fetch("http://localhost:5000/caldav/calendars")
         .then(response => {
             return response.text()
         }).then(text => {
             let cals = JSON.parse(text)
+            console.debug("Calendars loaded: ", cals)
             manager.addCals(cals)
         })
 }
 
 function fetch_events() {
+    console.debug("Fetching events")
     fetch("http://localhost:5000/caldav/events").then(response => {
         return response.text()
     }).then(text => {
             let events = JSON.parse(text)
+            console.debug("Events loaded: ", events)
+
             manager.addEvents(events)
         })
 }
