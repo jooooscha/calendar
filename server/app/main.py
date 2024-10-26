@@ -8,14 +8,14 @@ import app.db as db
 from dotenv import load_dotenv
 import os
 from datetime import datetime, timedelta
-from dateutil.rrule import rrulestr
+from app.event_helper import *
+from zoneinfo import ZoneInfo
+import sqlite3
 
 # remove ctrl+c traceback
 import signal
 import sys
 signal.signal(signal.SIGINT, lambda x, y: sys.exit(0))
-
-DATEFORMAT = "%Y-%m-%dT%H:%M"
 
 load_dotenv()
 
@@ -38,6 +38,7 @@ def sync_data():
     except:
         print("Could not login to DAV client")
         return 404
+
     principal = client.principal()
     calendars = principal.calendars()
 
@@ -49,26 +50,25 @@ def sync_data():
         for cal in calendars:
             print(f"syncing {cal}")
 
-            if cal.name != "TESTCAL": # TODO: remove
-                continue
-
+            # Add calendar to DB (if not exists)
             color = cal.get_property(caldav.elements.ical.CalendarColor())
             db.add_cal(cal.id, cal.name, color, visible=True)
 
+            # only connect once for all events
+            conn = sqlite3.connect('calendars.db')
+
+
+            # go through all events
             print(f"{cal} has {len(cal.events())} events")
             for event in cal.events():
                 for component in event.icalendar_instance.walk():
                     if component.name == "VEVENT":
 
-                        #  print(component.get("rrule"))
-                        #  print(component.get("exdate"))
-                        #  breakpoint()
-
                         endDate = component.get("dtend")
 
-                        start = component.get("dtstart").dt.strftime(DATEFORMAT)
+                        start = component.get("dtstart").dt
                         if endDate and endDate.dt:
-                            end = endDate.dt.strftime(DATEFORMAT)
+                            end = endDate.dt
                         else:
                             end = start
 
@@ -78,37 +78,75 @@ def sync_data():
 
                                 # for some reason, nextcloud stores the end date for all-day events as the n+1 date
                                 # therefore, we descrease the end date by one
-                                fixedend = datetime.strptime(end, DATEFORMAT) - timedelta(days=1)
-                                end = fixedend.strftime(DATEFORMAT)
+                                end = end - timedelta(days=1)
 
                             case _:
                                 category = "time"
 
-                        exdates = []
-                        exdate_list = component.get("exdate")
-                        if exdate_list is not None:
-                            for exdate in exdate_list:
-                                exdates.append(exdate.dts[0].dt)
+                        exdates = [] # TODO: implement excluded dates
 
+                        #  exdate_list = component.get("exdate")
+                        #  if exdate_list is not None:
+                        #      for exdate in exdate_list:
+                        #          exdates.append(exdate.dts[0].dt)
+
+                        # Handle reoccuring events
                         if component.get("rrule"):
-                            print(component.get("rrule"))
                             rrule = component.get("rrule").to_ical().decode()
+
+                            occurrences = process_rrule(rrule, start)
+                            for occ in occurrences:
+                                if occ.year > datetime.now().year + 10:
+                                    continue
+
+                                if isinstance(start, datetime):
+                                    s = start.date()
+                                else:
+                                    s = start
+                                diff = occ.date() - s
+                                try:
+                                    end = end + diff
+                                except:
+                                    breakpoint()
+
+                                db.add_event(
+                                    id=component.get("uid"),
+                                    calendar_id=cal.id,
+                                    title=component.get("summary"),
+                                    body=component.get("description"),
+                                    start=start.isoformat(),
+                                    end=end.isoformat(),
+                                    location=component.get("location"),
+                                    read_only=True,
+                                    category=category,
+                                    rrule=rrule,
+                                    exdates=exdates,
+                                    conn=conn,
+                                    commit=False,
+                                    close=False,
+                                )
                         else:
                             rrule = ""
 
-                        db.add_event(
-                            id=component.get("uid"),
-                            calendar_id=cal.id,
-                            title=component.get("summary"),
-                            body=component.get("description"),
-                            start=start,
-                            end=end,
-                            location=component.get("location"),
-                            read_only=True,
-                            category=category,
-                            rrule=rrule,
-                            exdates=exdates
-                        )
+                            db.add_event(
+                                id=component.get("uid"),
+                                calendar_id=cal.id,
+                                title=component.get("summary"),
+                                body=component.get("description"),
+                                start=start.isoformat(),
+                                end=end.isoformat(),
+                                location=component.get("location"),
+                                read_only=True,
+                                category=category,
+                                rrule=rrule,
+                                exdates=exdates,
+                                conn=conn,
+                                commit=False,
+                                close=False,
+                            )
+
+            conn.commit()
+            conn.close()
     print("DB data updated")
 
 def init(sync=False):
@@ -122,50 +160,23 @@ def init(sync=False):
 
 def assemble_events(row):
     events = []
+
     start = row["start"]
+
     if row["rrule"]:
         # handle rrule
-        rrule = row["rrule"]
-        rrule_str = f"RRULE:{rrule}"
-        # Create a string combining the DTSTART and RRULE
-        rule_string = f"DTSTART:{start}\n{rrule_str}"
-        # Parse the rrule
-        rule = rrulestr(rule_string)
-        occurrences = list(rule)
+        occurrences = process_rrule(row["rrule"], start)
 
         for o in occurrences:
-            events.append(
-                {
-                    "id": row["id"],
-                    "calendarId": row["calendarId"],
-                    "title": row["title"],
-                    "body": row["body"],
-                    "start": row["start"],
-                    "end": row["end"],
-                    "location": row["location"],
-                    "isReadOnly": row["isReadOnly"],
-                    "category": row["category"],
-                }
-            )
+            events.append(event_to_dict(row, new_start=o))
     else:
-        events.append([
-            {
-                "id": row["id"],
-                "calendarId": row["calendarId"],
-                "title": row["title"],
-                "body": row["body"],
-                "start": row["start"],
-                "end": row["end"],
-                "location": row["location"],
-                "isReadOnly": row["isReadOnly"],
-                "category": row["category"],
-            }
-        ])
+        events.append([ event_to_dict(row) ])
     return events
 
 @app.route('/caldav/calendars')
 def get_calendars():
     data = db.get_calendars()
+    print("Calendars in DB", len(data))
     cals = [
         {
             "id": r[0],
@@ -180,16 +191,12 @@ def get_calendars():
 
 @app.route('/caldav/events')
 def get_caldav_events():
+    print("Events requested")
     data = db.get_events()
 
-    events = []
-    for row in data:
-        events.append(assemble_events(row))
+    events = [ assemble_events(row) for row in data ]
 
-    print(events)
     return events
-
-
 
 @app.route('/caldav/toggle/<cal_id>')
 def toggle_calendar(cal_id):
@@ -227,7 +234,7 @@ def sync_calendar():
 
 def main():
     print("Connect to DAV")
-    init(False)
+    init(sync=True)
     print("Running server...")
     app.run(debug=True)
 
