@@ -103,9 +103,15 @@ def add_event(
     category,
     rrule,
     exdates,
+    conn=None,
+    commit=True,
+    close=True,
 ):
-    conn = sqlite3.connect('calendars.db')
+    if conn is None:
+        conn = sqlite3.connect('calendars.db')
+
     cur = conn.cursor()
+
     cur.execute("""
         INSERT OR REPLACE INTO events
             (id, calendarId, title, body, start, end, location, isReadOnly, category, rrule)
@@ -137,8 +143,11 @@ def add_event(
             (id, calendar_id, d)
         )
 
-    conn.commit()
-    conn.close()
+
+    if commit:
+        conn.commit()
+    if close:
+        conn.close()
 
 def get_events():
     conn = sqlite3.connect('calendars.db')
