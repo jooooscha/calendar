@@ -55,6 +55,8 @@
             pythonEnv
             sqlitebrowser
             nodePackages.live-server
+            nodejs_22
+            yarn
           ];
         };
 

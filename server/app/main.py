@@ -68,7 +68,7 @@ def sync_calendar():
 def main():
     load_dotenv("./.env")
     print("Connect to DAV")
-    dav.init(sync=True)
+    dav.init(sync=False)
     print("Running server...")
     app.run(debug=True, use_reloader=False)
 

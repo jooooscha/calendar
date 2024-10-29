@@ -11,7 +11,7 @@ export class Manager {
             useDetailPopup: true, // Enable popup for event details
             useFormPopup: true,
             isReadOnly: true,
-            usageStatistics: false,
+            usageStatistics: false, // disable google spyware
             month: {
                 visibleWeeksCount: 5,
                 startDayOfWeek: 1,
