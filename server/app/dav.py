@@ -61,6 +61,10 @@ def sync_data():
                 for component in event.icalendar_instance.walk():
                     if component.name == "VEVENT":
 
+                        #  if component.get("uid") == "551da4ee-e2f5-4292-8ca9-eb1e619da464":
+                            #  print(event.icalendar_instance.to_ical().decode())
+                            #  breakpoint()
+
                         endDate = component.get("dtend")
 
                         start = component.get("dtstart").dt
@@ -80,26 +84,42 @@ def sync_data():
                             case _:
                                 category = "time"
 
-                        exdates = [] # TODO: implement excluded dates
-
-                        #  exdate_list = component.get("exdate")
-                        #  if exdate_list is not None:
-                        #      for exdate in exdate_list:
-                        #          exdates.append(exdate.dts[0].dt)
 
                         # Handle reoccuring events
                         if component.get("rrule"):
                             rrule = component.get("rrule").to_ical().decode()
 
+                            # handle exclusion dates
+                            exdates = []
+                            exdate_list = component.get("exdate")
+                            if exdate_list is not None:
+                                if not isinstance(exdate_list, list):
+                                    exdate_list = [ exdate_list ]
+
+                                for exdate in exdate_list:
+                                    exdate_list = exdate.dts
+                                    exdate_list = [ d.dt for d in exdate_list ]
+                                    exdates += (exdate_list)
+
                             occurrences = process_rrule(rrule, start)
                             for occ in occurrences:
+
+                                if exdate_list and occ in exdate_list:
+                                    #  print(f"Skipping {component.get('summary')}: {occ} because its in {exdate_list}")
+                                    #  breakpoint()
+                                    # if date is in exdate_list, we skip it
+                                    continue
+
+                                # only load dates 10 years into the future
                                 if occ.year > datetime.now().year + 10:
                                     continue
 
+                                # TODO: fix this ugly .date() thing:
+
                                 # event start, not start of this repetition
                                 # we calculate that later with the diff
-                                start = start.date() if isinstance(start, datetime) else start
-                                diff = occ.date() - start if isinstance(occ, datetime) else occ - start
+                                start_date = start.date() if isinstance(start, datetime) else start
+                                diff = occ.date() - start_date if isinstance(occ, datetime) else occ - start_date
 
                                 start = start + diff
                                 end = end + diff
@@ -115,7 +135,7 @@ def sync_data():
                                     read_only=True,
                                     category=category,
                                     rrule=rrule,
-                                    exdates=exdates,
+                                    exdates=component.get("exdate"),
                                     conn=conn,
                                     commit=False,
                                     close=False,
@@ -134,7 +154,7 @@ def sync_data():
                                 read_only=True,
                                 category=category,
                                 rrule=rrule,
-                                exdates=exdates,
+                                exdates=component.get("exdate"),
                                 conn=conn,
                                 commit=False,
                                 close=False,

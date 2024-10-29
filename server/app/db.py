@@ -55,7 +55,7 @@ def init(drop=False):
 def add_cal(id, name, color, visible=True):
     conn = sqlite3.connect('calendars.db')
     cur = conn.cursor()
-    cur.execute("INSERT OR REPLACE INTO calendars (id, name, color, visible) VALUES (?, ?, ?, ?)", (id, name, color, visible))
+    cur.execute("INSERT INTO calendars (id, name, color, visible) VALUES (?, ?, ?, ?)", (id, name, color, visible))
     conn.commit()
     conn.close()
 
@@ -113,7 +113,7 @@ def add_event(
     cur = conn.cursor()
 
     cur.execute("""
-        INSERT OR REPLACE INTO events
+        INSERT INTO events
             (eventId, calendarId, title, body, start, end, location, isReadOnly, category, rrule)
         VALUES
             (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -132,16 +132,17 @@ def add_event(
         )
     )
 
-    for d in exdates:
-        cur.execute("""
-            INSERT OR REPLACE INTO
-                exdates
-                (eventId, calendarId, date)
-            VALUES
-                (?, ?, ?)
-         """,
-            (id, calendar_id, d)
-        )
+    #  if exdates:
+    #      for d in exdates:
+    #          cur.execute("""
+    #              INSERT INTO
+    #                  exdates
+    #                  (eventId, calendarId, date)
+    #              VALUES
+    #                  (?, ?, ?)
+    #           """,
+    #              (id, calendar_id, d)
+    #          )
 
 
     if commit:
