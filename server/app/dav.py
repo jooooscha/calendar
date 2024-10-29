@@ -61,10 +61,6 @@ def sync_data():
                 for component in event.icalendar_instance.walk():
                     if component.name == "VEVENT":
 
-                        #  if component.get("uid") == "551da4ee-e2f5-4292-8ca9-eb1e619da464":
-                            #  print(event.icalendar_instance.to_ical().decode())
-                            #  breakpoint()
-
                         endDate = component.get("dtend")
 
                         start = component.get("dtstart").dt
@@ -105,8 +101,6 @@ def sync_data():
                             for occ in occurrences:
 
                                 if exdate_list and occ in exdate_list:
-                                    #  print(f"Skipping {component.get('summary')}: {occ} because its in {exdate_list}")
-                                    #  breakpoint()
                                     # if date is in exdate_list, we skip it
                                     continue
 
